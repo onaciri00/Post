@@ -8,6 +8,7 @@ Post::Post()
     size_len = 0;
     left_over = 0;
     chunk_left = 0;
+    rare = 0;
     mimeType();
 }
 
@@ -239,11 +240,11 @@ void Post::chunk_write(std::string body, size_t body_size)
             buff_chunk = buffer;
             left_over = buffer.size();
             chunk_ctl = 0;
+            outFile.write(tmp.c_str(), chunk_ctl);
             return ;
         }
-
-        chunks_s = body.substr(0, body.find("\r\n"));
-        body = body.substr(body.find("\r\n") + 2, body.size() -  body.find("\r\n") - 2);
+        chunks_s = buffer.substr(0, buffer.find("\r\n"));
+        buffer = buffer.substr(buffer.find("\r\n") + 2, buffer.size() -  buffer.find("\r\n") - 2);
         ss << chunks_s;
         ss >> std::hex >> chunk_ctl;
         if (!chunk_ctl)
@@ -254,21 +255,55 @@ void Post::chunk_write(std::string body, size_t body_size)
             std::cout << "Ima\n";
             exit(1) ;
 		}
+        if (chunk_ctl > buffer.size())
+        {
+            tmp.append(buffer, 0, buffer.size());
+            chunk_ctl = chunk_ctl- buffer.size();
+        }
+        else
+        {
+            tmp.append(buffer, 0, buffer.size());
+            outFile.write(tmp.c_str(), chunk_ctl);
+             buffer = body.substr(chunk_ctl + 2, body_size - chunk_ctl - 2);
+            if (buffer.find("\r\n") == std::string::npos)
+             {
+              buff_chunk = buffer;
+              left_over = buffer.size();
+              chunk_ctl = 0;
+              outFile.write(tmp.c_str(), chunk_ctl);
+             return ;
+              }
+        chunks_s = buffer.substr(0, buffer.find("\r\n"));
+        buffer = buffer.substr(buffer.find("\r\n") + 2, buffer.size() -  buffer.find("\r\n") - 2);
+        ss << chunks_s;
+        ss >> std::hex >> chunk_ctl;
+        if (!chunk_ctl)
+		{
+           	outFile.close();
+           	crfile = -2;
+            std::cout <<"chunk -== " << chunk_ctl << std::endl;
+            std::cout << "Ima\n";
+            exit(1) ;
+		}
+        }
+        std::cout << "-|-|-||-||||||||||||||||----|||-||||||------------------------|-|-||-|-|--|-\n"<<buffer << "\n++++" << std::endl;
+
         std::cout << "Metod 2\n";
-        outFile.write(body.c_str(), chunk_ctl);
-        std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
-        std::cout << body << std::endl;
-        std::cout << chunk_ctl<<std::endl;
-        std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
-        buffer = body.substr(chunk_ctl + 1, body_size - (chunk_ctl + 1));
-        left_over = body_size - (chunk_ctl + 1);
-        chunk_ctl = 0;
-        std::cout << "------------------------------------------------------------------------------------------------------------------------------------\n";
-        std::cout << body.substr(0,chunk_ctl + 1)<<std::endl;
-        std::cout << "------------------------------------------------------------------------------------------------------------------------------------\n";
-        std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
-        std::cout << body.substr(chunk_ctl + 1, body_size - (chunk_ctl + 1));
-        std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+
+        outFile.write(tmp.c_str(), tmp.size());
+        // std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        // // std::cout << body << std::endl;
+        // // std::cout << chunk_ctl<<std::endl;
+        // // std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        // buffer = body.substr(chunk_ctl + 1, body_size - (chunk_ctl + 1));
+        // left_over = body_size - (chunk_ctl + 1);
+        // chunk_ctl = 0;
+        // std::cout << "------------------------------------------------------------------------------------------------------------------------------------\n";
+        // std::cout << body.substr(0,chunk_ctl + 1)<<std::endl;
+        // std::cout << "------------------------------------------------------------------------------------------------------------------------------------\n";
+        // std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+        // std::cout << body.substr(chunk_ctl + 1, body_size - (chunk_ctl + 1));
+        // std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
         std::cout << "out Metod 2\n";
 
 
