@@ -222,6 +222,11 @@ void Post::chunk_write(std::string body, size_t body_size)
         std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
 
         std::cout << "out Metod 1\n";
+        if ((int) chunk_ctl - body_size < 0)
+        {
+            std::cout << "lol1";
+            exit(1);
+        }
         chunk_ctl = chunk_ctl - body_size;
         std::cout << "after sub   " << chunk_ctl<<std::endl;
         buffer = "";
@@ -238,45 +243,49 @@ void Post::chunk_write(std::string body, size_t body_size)
         std::string chunks_s;
         std::stringstream ss;
 
-
-        if (body.find("\r\n") == std::string::npos)
-        {
-            chunk_ctl = 0;
-            buff_chunk.append(body, 0, body_size);
-            left_over = body.size();
-            special = 1;
-            return ;
-        }
-        tmp = body.substr(0, chunk_ctl);
-        std::cout << "-----------------------tmp-------------------------------:\n"<<tmp<< "\n tmp size:" << tmp.size() <<std::endl;
+        std::cout << "Method 2\n";
+        buffer = "";
+        tmp.append(body, 0, chunk_ctl);
         buffer = body.substr(chunk_ctl + 2, body_size - chunk_ctl - 2);
-        std::cout << "-----------------------buffer-------------------------------:\n"<<buffer << "\n buffer size:" << buffer.size()<<std::endl;
-        if (buffer.find("\r\n") == std::string::npos)
+        if (buffer.find("\r\n") != std::string::npos)
         {
-            std::cout << "didn't find rn \n";
-            chunk_ctl = 0;
-            buff_chunk = buffer;
-            left_over = buffer.size();
+            chunks_s = buffer.substr(0, buffer.find("\r\n"));
+            buffer = buffer.substr(buffer.find("\r\n") + 2, buffer.size() -  buffer.find("\r\n") - 2);
+            ss << chunks_s;
+            ss >> std::hex >> chunk_ctl;
+            std::cout << "chunks " <<chunk_ctl  << "chunks body = "<< chunks_s<<std::endl;
+            if (!chunk_ctl)
+            {
+                outFile.write(tmp.c_str(), tmp.size());
+                outFile.close();
+                crfile = -2;
+                std::cout <<"chunk3 -== " << chunk_ctl << std::endl;
+                std::cout << "Ima\n";
+                exit(1) ;
+            }
+            if (chunk_ctl < tmp.size())
+            {
+                std::cout << "special 1\n";
+                exit(1);
+            }
+            tmp.append(buffer, 0, buffer.size());
+            if (chunk_ctl < tmp.size())
+            {
+                std::cout << "special 1\n";
+                exit(1);
+            }
             outFile.write(tmp.c_str(), tmp.size());
-            chunk_ctl = chunk_ctl - tmp.size();
-            special = 2;
-            return;
+            chunk_ctl = chunk_ctl - buffer.size();
         }
-        chunks_s = buffer.substr(0, buffer.find("\r\n"));
-        buffer = buffer.substr(buffer.find("\r\n") + 2, buffer.size() -  buffer.find("\r\n") - 2);
-        ss << chunks_s;
-        ss >> std::hex >> chunk_ctl;
-        std::cout << "chunks " <<chunk_ctl  << "chunks body = "<< chunks_s<<std::endl;
-        tmp.append(buffer, 0, buffer.size());
-        if (chunk_ctl >= tmp.size())
-            outFile.write(tmp.c_str(), tmp.size());
         else
         {
-            std::cout << "special case\n";
-            exit(1);
+            outFile.write(tmp.c_str(), tmp.size());
+            // chunk_ctl = chunk_ctl - tmp.size();
+            buff_chunk = buffer;
+            left_over = buffer.size();
+            chunk_ctl = 0;
         }
-        std::cout << "\n tmp size:" << tmp.size()<< "\n buffer size:" << buffer.size() <<std::endl;
-        chunk_ctl = chunk_ctl - tmp.size();
+
     }
 
 }
@@ -288,26 +297,15 @@ void Post::chunked_file(std::string body, size_t body_size)
     if (left_over)
     {
         buffer = "";
-        std::cout << "in LeftOver\n";
+        std::cout << "size of buff " << left_over << "size of body " << body_size<<std::endl;
         buffer.append(buff_chunk, 0, left_over);
-        std::cout << left_over << std::endl;
-        std::cout << "Buff chck == " << buff_chunk << std::endl;
-        std::cout << "buffer app1 == " << buffer << std::endl;
+        std::cout <<"buffer\n"<< buffer << "\n bufferchunk\n" << buff_chunk<<std::endl;
         buffer.append(body, 0, body_size);
-        std::cout << "buffer app2 == " << buffer << std::endl;
-        std::cout << "body == " << buff_chunk << std::endl;
-        body_size = body_size  + left_over;
+        std::cout <<"buffer\n"<< buffer << "\n body\n" << body<<std::endl;
         body = buffer;
-        buffer = "";
-        buff_chunk = "";
-        if (special == 2)
-        {
-            body = body.substr(2, body_size - 2);
-            body_size = body_size- 2;
-        }
+        body_size = left_over + body_size;
         left_over = 0;
-        std::cout << " create size "<<body_size <<" true body "<<  body.size()<<std::endl;
-        std::cout << "out LeftOver\n";
+        // exit(1);
     }
     if (chunk_ctl)
     {
@@ -320,8 +318,6 @@ void Post::chunked_file(std::string body, size_t body_size)
 
         std::cout << "chunks is zero\n";
         std::string chunks_s;
-        // if ( body.find("\r\n") != std::string::npos)
-        // {
         if (rare)
         {
             body = body.substr(2, body_size - 2);
@@ -337,13 +333,6 @@ void Post::chunked_file(std::string body, size_t body_size)
         ss << chunks_s;
         ss >> std::hex >> chunk_ctl;
         std::cout << "chunks " <<chunk_ctl  << "chunks body = "<< chunks_s<<std::endl;
-        // }
-        // else 
-        // {
-        //     buffer.append(body, body_size);
-        //     left_over = body_size  + left_over;
-        //     return ;
-        // }
 		if (!chunk_ctl)
 		{
            	outFile.close();
@@ -360,9 +349,6 @@ void Post::chunked_file(std::string body, size_t body_size)
 
 void Post::process(std::string body, size_t body_size)
 {
-    // std::cout << "Post\n";
-    // std::cout << body<<"\n-this size->"<<body_size<<std::endl;
-    // body_size = body_size -  chunk_left - total_Body;
     std::cout <<"HERRRRRRRRRRRR IS body as al  " <<body_size<<std::endl;
     std::cout << "GO   "<< crfile << std::endl;
     std::cout << "*********************************\n";
