@@ -202,14 +202,14 @@ void Post::normalFile(std::string body, size_t body_size)
 
 void Post::chunk_write(std::string body, size_t body_size)
 {
-    if (chunk_ctl >= body_size)
+    if (chunk_ctl >= (int)body.size())
     {
         std::cout << "Metod 1\n";
         std::cout << "body: "<< body.size()<< "   "<<body_size<<std::endl;
-        outFile.write(body.c_str(), body_size);
+        outFile.write(body.c_str(), body.size());
         std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
-        std::cout << body << std::endl;
-        std::cout << chunk_ctl<<std::endl;
+        // std::cout << body << std::endl;
+        // std::cout << chunk_ctl<<std::endl;
         std::streampos position = outFile.tellp();
         if (outFile.good()) {
             std::cout << "Write operation successful." << std::endl;
@@ -222,20 +222,21 @@ void Post::chunk_write(std::string body, size_t body_size)
         std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
 
         std::cout << "out Metod 1\n";
-        if ((int) chunk_ctl - body_size < 0)
+        if ((int) chunk_ctl - body.size() < 0)
         {
             std::cout << "lol1";
             exit(1);
         }
-        chunk_ctl = chunk_ctl - body_size;
         std::cout << "after sub   " << chunk_ctl<<std::endl;
         buffer = "";
         left_over = 0;
-        if (body_size == chunk_ctl)
+        if ((int)body.size() == chunk_ctl)
         {
              rare = 1;
              chunk_ctl = 0;
+             return;
         }
+        chunk_ctl = chunk_ctl - body.size();
     }
     else
     {
@@ -246,7 +247,18 @@ void Post::chunk_write(std::string body, size_t body_size)
         std::cout << "Method 2\n";
         buffer = "";
         tmp.append(body, 0, chunk_ctl);
-        buffer = body.substr(chunk_ctl + 2, body_size - chunk_ctl - 2);
+        if (body.size() - chunk_ctl == 1)
+        {
+            outFile.write(tmp.c_str(), tmp.size());
+
+            // chunk_ctl = chunk_ctl - tmp.size();
+            buff_chunk = body.substr(chunk_ctl, 1);
+            left_over = 1;
+            chunk_ctl = 0;
+            rare = 1;
+            return ;
+        }
+        buffer = body.substr(chunk_ctl + 2, body.size() - chunk_ctl - 2);
         if (buffer.find("\r\n") != std::string::npos)
         {
             chunks_s = buffer.substr(0, buffer.find("\r\n"));
@@ -263,13 +275,13 @@ void Post::chunk_write(std::string body, size_t body_size)
                 std::cout << "Ima\n";
                 exit(1) ;
             }
-            if (chunk_ctl < tmp.size())
+            if (chunk_ctl < (int)tmp.size())
             {
                 std::cout << "special 1\n";
                 exit(1);
             }
             tmp.append(buffer, 0, buffer.size());
-            if (chunk_ctl < tmp.size())
+            if (chunk_ctl < (int)tmp.size())
             {
                 std::cout << "special 1\n";
                 exit(1);
@@ -297,13 +309,15 @@ void Post::chunked_file(std::string body, size_t body_size)
     if (left_over)
     {
         buffer = "";
-        std::cout << "size of buff " << left_over << "size of body " << body_size<<std::endl;
+        std::cout << "size of buff " << left_over << "size of body " << body.size()<<std::endl;
+        std::cout << "*********************************************************************some buff*******************\n"<<(int)buff_chunk[0]<<std::endl;
         buffer.append(buff_chunk, 0, left_over);
+        std::cout << "*********************************************************************some buff1*******************\n"<<(int)buffer[0]<<std::endl;
         std::cout <<"buffer\n"<< buffer << "\n bufferchunk\n" << buff_chunk<<std::endl;
-        buffer.append(body, 0, body_size);
+        buffer.append(body, 0, body.size());
         std::cout <<"buffer\n"<< buffer << "\n body\n" << body<<std::endl;
         body = buffer;
-        body_size = left_over + body_size;
+        body_size = left_over + body.size();
         left_over = 0;
         // exit(1);
     }
@@ -320,9 +334,10 @@ void Post::chunked_file(std::string body, size_t body_size)
         std::string chunks_s;
         if (rare)
         {
-            body = body.substr(2, body_size - 2);
+            body = body.substr(2, body.size() - 2);
             rare = 0;
         }
+        std::cout << "finallllllllllllllllllllllllllllllllll bosd\n"<<body;
         if (body.find("\r\n") == std::string::npos)
         {
             std::cout << "not found \n";
@@ -356,6 +371,7 @@ void Post::process(std::string body, size_t body_size)
     std::cout << "*********************************\n";
     std::cout << "ddsds\n";
     std::cout << body <<std::endl;
+    std::cout << "\n some => "<<(int)body[0]<<std::endl;
     if (body_size == 2)
     {
         buff_chunk = body;

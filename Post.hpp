@@ -6,7 +6,7 @@
 /*   By: onaciri <onaciri@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/15 09:09:48 by onaciri           #+#    #+#             */
-/*   Updated: 2024/01/21 11:26:20 by onaciri          ###   ########.fr       */
+/*   Updated: 2024/01/22 11:49:40 by onaciri          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,10 +40,10 @@ class Post : public Method
         /* data */
 		int crfile;
 		int MethodType;
-         int special;
+        int special;
         int rare;
         size_t left_over;
-        size_t chunk_ctl;
+        int chunk_ctl;
 		size_t size_len;
         size_t total_Body;
         size_t chunk_left;
