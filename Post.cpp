@@ -773,7 +773,6 @@ void Post::chunked_file(std::string body, size_t body_size)
 
 void Post::process(std::string body, size_t body_size)
 {
-    usleep(700);
     // std::cout <<"HERRRRRRRRRRRR IS body as al  " <<body_size<<std::endl;
     // std::cout << "GO   "<< crfile << std::endl;
     // std::cout << "*********************************\n";
