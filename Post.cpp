@@ -538,13 +538,13 @@ void Post::openFile(std::string body, size_t body_size)
     {
         if ((headers.find("Transfer-Encoding"))->second == "chunked")
 		{
-            std::cout << "HERE \n";
 			MethodType = 1;
 		}
-		else
-		{
-			MethodType = 2;
-		}
+    }
+    if (!MethodType)
+    {
+        MethodType = 2;
+
     }
 	if (headers.find("Content-Type") != headers.end())
     {
@@ -561,6 +561,7 @@ void Post::openFile(std::string body, size_t body_size)
     {
         std::cout << "No Content Type\n";
 		crfile = -2;
+        end = 1;
         return ;
     }
 	// Get the current time
@@ -581,11 +582,19 @@ void Post::openFile(std::string body, size_t body_size)
     {
         size_len =  (size_t)std::atoi((headers.find("Content-Length")->second).c_str());
     }
+    else
+    {
+        end = 1;
+        return ;
+    }
 	if (outFile.is_open())
 	{
         crfile = 1;
         body_size =  body.size(); 
-        chunked_file(body, body_size);
+        if (MethodType == 2)
+            normalFile(body, body_size);
+        else
+            chunked_file(body, body_size);
         
     }
     else
@@ -602,6 +611,7 @@ void Post::normalFile(std::string body, size_t body_size)
     {
         outFile.close();
         crfile = -2;
+        end = 1;
     }
 }
 
@@ -629,11 +639,11 @@ void Post::chunk_write(std::string body, size_t body_size)
         // std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
 
         // std::cout << "out Metod 1\n";
-        if ((int) chunk_ctl - body.size() < 0)
-        {
-            std::cout << "lol1";
-            exit(1);
-        }
+        // if ((int) chunk_ctl - body.size() < 0)
+        // {
+        //     std::cout << "lol1";
+        //     exit(1);
+        // }
         // std::cout << "after sub   " << chunk_ctl<<std::endl;
         buffer = "";
         left_over = 0;
@@ -749,7 +759,7 @@ void Post::chunked_file(std::string body, size_t body_size)
         if (body.find("\r\n") == std::string::npos)
         {
             std::cout << "not found \n";
-            exit(1);
+            end = 1;
         }
         chunks_s = body.substr(0, body.find("\r\n"));
         body = body.substr(body.find("\r\n") + 2, body.size() -  body.find("\r\n") - 2);
