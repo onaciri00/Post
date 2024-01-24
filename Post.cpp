@@ -416,6 +416,7 @@ Post::Post()
     rare = 0;
     special = 0;
     end = 0;
+    MethodType = 0;
     mimeType();
 }
 
@@ -606,8 +607,10 @@ void Post::openFile(std::string body, size_t body_size)
 
 void Post::normalFile(std::string body, size_t body_size)
 {
+    (void)body_size;
 	outFile.write(body.c_str(), body.size());
-    if (body_size >= size_len)
+    total_Body += body.size();
+    if (total_Body >= size_len)
     {
         outFile.close();
         crfile = -2;
@@ -783,31 +786,22 @@ void Post::chunked_file(std::string body, size_t body_size)
 
 void Post::process(std::string body, size_t body_size)
 {
-    // std::cout <<"HERRRRRRRRRRRR IS body as al  " <<body_size<<std::endl;
-    // std::cout << "GO   "<< crfile << std::endl;
-    // std::cout << "*********************************\n";
-    // std::cout << "-----------     " << chunk_ctl << "   -----------------------*\n";
-    // std::cout << "*********************************\n";
-    // std::cout << "ddsds\n";
-    // std::cout << body <<std::endl;
-    // std::cout << "\n some => "<<(int)body[0]<<std::endl;
-    if (body_size == 2)
+    if (crfile == -2)
+        return ;
+    if (body_size == 2 && MethodType == 1)
     {
         buff_chunk = body;
         left_over = 2;
         return ;
     } 
-    if (crfile == -2)
-        return ;
 	 if (crfile > 0)
-        chunked_file(body, body_size);//remove
-    // {
-    //     if (MethodType == 2)
-	// 	    normalFile(body, body_size);
-    //   else if (MethodType == 1)
-    //        chunked_file(body);
+    {
+        if (MethodType == 2)
+		    normalFile(body, body_size);
+      else if (MethodType == 1)
+           chunked_file(body, body_size);
         
-    // }
+    }
 	else if (!crfile)
 		openFile(body, body_size);
 }
