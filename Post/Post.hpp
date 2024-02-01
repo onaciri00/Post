@@ -6,7 +6,7 @@
 /*   By: onaciri <onaciri@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/15 09:09:48 by onaciri           #+#    #+#             */
-/*   Updated: 2024/01/28 10:08:22 by onaciri          ###   ########.fr       */
+/*   Updated: 2024/02/01 09:53:56 by onaciri          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <iostream>
 #include <cstring>
 #include <unistd.h>
@@ -30,6 +31,8 @@
 #include <iostream>
 #include <ctime>
 #include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
 
 class Post : public Method
 {
@@ -47,6 +50,9 @@ class Post : public Method
 		size_t size_len;
         size_t total_Body;
         size_t chunk_left;
+        int find_sep;
+        int file_hang;
+        int is_first;
         std::string buffer;
         std::string buff_chunk;
 		std::map<std::string, std::string> mime;
@@ -55,7 +61,6 @@ class Post : public Method
         std::string sep;
         std::string sep_end;
         std::string sep_found;
-        int find_sep;
     public:
         Post();
         Post(const Post& post);
