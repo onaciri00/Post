@@ -6,7 +6,7 @@
 /*   By: onaciri <onaciri@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/15 09:09:48 by onaciri           #+#    #+#             */
-/*   Updated: 2024/01/22 11:49:40 by onaciri          ###   ########.fr       */
+/*   Updated: 2024/02/03 16:07:38 by onaciri          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <iostream>
 #include <cstring>
 #include <unistd.h>
@@ -30,6 +31,8 @@
 #include <iostream>
 #include <ctime>
 #include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
 
 class Post : public Method
 {
@@ -38,6 +41,7 @@ class Post : public Method
 		void mimeType();
     private:
         /* data */
+        
 		int crfile;
 		int MethodType;
         int special;
@@ -47,22 +51,34 @@ class Post : public Method
 		size_t size_len;
         size_t total_Body;
         size_t chunk_left;
+        int find_sep;
+        int file_hang;
+        int is_first;
         std::string buffer;
         std::string buff_chunk;
 		std::map<std::string, std::string> mime;
 		std::fstream outFile;
-		
+        std::fstream out;
+        std::string sep;
+        std::string sep_end;
+        std::string sep_found;
     public:
         Post();
         Post(const Post& post);
         Post& operator=(const Post& post);
         ~Post();
+
+        std::string creat_file_name();
         
-        void process(std::string body, size_t body_size);
+        int process(std::string body, size_t body_size, int event);
 		void openFile(std::string body, size_t body_size);
 		void normalFile(std::string body, size_t body_size);
+        
         void chunked_file(std::string body, size_t body_size);
         void chunk_write(std::string body, size_t body_size);
+
+        void    ft_boundary(std::string& body);
+
 };
 
 

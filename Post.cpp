@@ -6,7 +6,7 @@
 /*   By: onaciri <onaciri@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/24 10:40:02 by onaciri           #+#    #+#             */
-/*   Updated: 2024/01/24 10:40:14 by onaciri          ###   ########.fr       */
+/*   Updated: 2024/02/04 12:33:07 by onaciri          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,8 +24,14 @@ Post::Post()
     special = 0;
     end = 0;
     MethodType = 0;
+    find_sep = 0;
+    is_first = 0;
+    sep = "";
+	sep_found = "";
+    file_hang = 0;
     mimeType();
 }
+
 
 Post::Post(const Post& post)
 {
@@ -46,6 +52,18 @@ Post::~Post()
 
 /*work*/
 
+std::string Post::creat_file_name()
+{
+    std::time_t currentTime = std::time(NULL);
+    // Convert time to struct tm in local time
+    std::tm* timeInfo = std::localtime(&currentTime);
+    // Format the time into a string
+    char time_B[80];  // Sufficiently large time_B
+    std::strftime(time_B, sizeof(time_B), "%Y-%m-%d_%H-%M-%S", timeInfo);
+    // Get the resulting string
+    std::string currentTimeString = time_B;
+    return time_B;
+}
 void Post::mimeType()
 {
    std::string str =
@@ -142,6 +160,7 @@ void Post::mimeType()
 void Post::openFile(std::string body, size_t body_size)
 {
 	std::string mimeVal;
+
 	if (headers.find("Transfer-Encoding") != headers.end())
     {
         if ((headers.find("Transfer-Encoding"))->second == "chunked")
@@ -149,12 +168,28 @@ void Post::openFile(std::string body, size_t body_size)
 			MethodType = 1;
 		}
     }
+    else if (!MethodType && headers.find("Content-Type") != headers.end())
+    {
+        std::string tmp_C = (headers.find("Content-Type"))->second;
+		if (tmp_C.find("boundary=") != std::string::npos)
+		{
+			buffer = tmp_C.substr(tmp_C.find("boundary=") + strlen("boundary=") , tmp_C.size() - tmp_C.find("boundary=") - strlen("boundary="));
+			MethodType = 3;
+			sep = "--";
+			sep.append(buffer,0, buffer.size());
+            sep_end = sep + "--";
+			buffer = "";
+			crfile = 1;
+			ft_boundary(body);
+			return ;
+		}
+    }
     if (!MethodType)
     {
         MethodType = 2;
 
     }
-	if (headers.find("Content-Type") != headers.end())
+	if (MethodType != 3 && headers.find("Content-Type") != headers.end())
     {
         if (mime.find( headers.find("Content-Type")->second) != mime.end())
 		{
@@ -165,27 +200,23 @@ void Post::openFile(std::string body, size_t body_size)
 			mimeVal = "x";
 		}
     }
-    else
+    else if (MethodType != 3)
     {
         std::cout << "No Content Type\n";
+        
 		crfile = -2;
         end = 1;
         return ;
     }
-	// Get the current time
-    std::time_t currentTime = std::time(NULL);
-    // Convert time to struct tm in local time
-    std::tm* timeInfo = std::localtime(&currentTime);
-    // Format the time into a string
-    char time_B[80];  // Sufficiently large time_B
-    std::strftime(time_B, sizeof(time_B), "%Y-%m-%d_%H-%M-%S", timeInfo);
-    // Get the resulting string
-    std::string currentTimeString = time_B;
-	std::string fileName = time_B;
-	std::string dot  = ".";
-	fileName = time_B + dot;
-	fileName = fileName + mimeVal;
-	outFile.open(fileName.c_str(), std::ios::out | std::ios::binary);
+	if (MethodType != 3)
+	{
+        std::string time_B = creat_file_name();
+		std::string fileName = time_B;
+		std::string dot  = ".";
+		fileName = time_B + dot;
+		fileName = fileName + mimeVal;
+		outFile.open(fileName.c_str(), std::ios::out | std::ios::binary);
+	}
     if (headers.find("Content-Length") != headers.end())
     {
         size_len =  (size_t)std::atoi((headers.find("Content-Length")->second).c_str());
@@ -195,21 +226,15 @@ void Post::openFile(std::string body, size_t body_size)
         end = 1;
         return ;
     }
-	if (outFile.is_open())
+	if (MethodType != 3 && outFile.is_open())
 	{
         crfile = 1;
-        body_size =  body.size(); 
+        body_size =  body.size();
         if (MethodType == 2)
             normalFile(body, body_size);
         else
-            chunked_file(body, body_size);
-        
+            chunked_file(body, body_size);        
     }
-    else
-    {
-        crfile = -1;
-    }
-    
 }
 
 void Post::normalFile(std::string body, size_t body_size)
@@ -219,6 +244,7 @@ void Post::normalFile(std::string body, size_t body_size)
     total_Body += body.size();
     if (total_Body >= size_len)
     {
+        out.close();
         outFile.close();
         crfile = -2;
         end = 1;
@@ -274,19 +300,11 @@ void Post::chunk_write(std::string body, size_t body_size)
                 outFile.close();
                 crfile = -2;
                 end = 1;
+                            out.close();
+
                 return ;
             }
-            if (chunk_ctl < (int)tmp.size())
-            {
-                std::cout << "special 1\n";
-                exit(1);
-            }
             tmp.append(buffer, 0, buffer.size());
-            if (chunk_ctl < (int)tmp.size())
-            {
-                std::cout << "special 1\n";
-                exit(1);
-            }
             outFile.write(tmp.c_str(), tmp.size());
             chunk_ctl = chunk_ctl - buffer.size();
         }
@@ -315,12 +333,9 @@ void Post::chunked_file(std::string body, size_t body_size)
         left_over = 0;
     }
     if (chunk_ctl)
-    {
         chunk_write(body, body_size);
-    }
     else
     {
-
         std::string chunks_s;
         if (rare)
         {
@@ -341,6 +356,7 @@ void Post::chunked_file(std::string body, size_t body_size)
            	outFile.close();
            	crfile = -2;
             end = 1;
+            out.close();
             return ;
 		}
         body_size = body_size - chunks_s.size() - 2;
@@ -348,24 +364,239 @@ void Post::chunked_file(std::string body, size_t body_size)
     }
 }
 
-void Post::process(std::string body, size_t body_size)
+
+void    Post::ft_boundary(std::string& body)
 {
+    size_t pos;
+    size_t pos1;
+
+    if (left_over)
+    {
+        buffer.append(body, 0, body.size());
+        left_over = 0;
+        body = buffer;
+        buffer = "";
+    }
+	if (body.find("\r") != std::string::npos && body.find("\r") + 3 - body.size() < sep.size())
+	{
+        if (body.find(sep_end) != std::string::npos)
+        {
+            if (body.find("\r\n") !=std::string::npos)
+            {
+                buffer = body.substr(0, body.size() - 2);
+		        left_over = body.size() - 2;
+                return ;
+            }
+        }
+		buffer = body;
+		left_over = body.size();
+		return ;
+	}
+    if (body.find(sep_end) != std::string::npos)
+    {
+		pos = body.find(sep_end);
+        pos1 = body.find(sep);
+        if (!pos || pos == 2)
+        {
+            end = 1;
+            if (out.is_open())
+            out.close();
+            return ;
+        }
+        else if (pos == pos1)
+        {
+            out.write(body.c_str(), pos - 2);
+            out.close();
+            end = 1;
+            return ;
+        }
+    }
+	if (body.find(sep) != std::string::npos)
+	{
+        pos = body.find(sep);
+        if (body.find(sep, pos + 1) != std::string::npos)
+        {
+            if (!pos || pos <= 2)
+            {
+                pos1 = body.find(sep, pos + 1);
+                std::string buff_tmp = body.substr(0, pos1);//problem in \r\n ;
+                buffer = body.substr(pos1, body.size() - pos1);
+                left_over = body.size() - pos1;
+                body = buff_tmp;
+            }
+            else
+            {
+                std::string buff_tmp = body.substr(0, pos);//problem in \r\n ;
+                buffer = body.substr(pos, body.size() - pos);
+                left_over = body.size() - pos;
+                body = buff_tmp;
+                out.write(body.c_str(), body.size());
+                out.close();
+                return ;
+            }
+        }
+        if (body.find("\r\n\r\n") != std::string::npos)
+		{
+            
+			sep_found = body.substr(pos, sep.size());
+			if (sep != sep_found)
+			{
+                std::cout <<"sep here is->\n"<< sep <<"\nsep found is \n" << sep_found<<std::endl;
+				std::cout << "4arib\n";
+				exit(1);
+			}
+            if (out.is_open())
+            {
+                if (pos > 2)
+                {
+                    buffer = body.substr(0, pos - 2);
+                    out.write(buffer.c_str(), buffer.size());
+                    buffer = body.substr(pos, body.size() - pos);
+                    left_over = buffer.size();
+                    out.close();
+                    return ;
+                }
+                else
+                    out.close();
+            }
+			if (body.find("filename") != std::string::npos)
+			{
+				pos = body.find("filename");
+                if (body.find("filename", pos + 1) != std::string::npos)
+                    pos1 = body.find(";", pos);         
+                else
+				    pos1 = body.find("\r\n", pos);
+				if (pos1 <= 1)
+					pos1 = 2;
+				std::string file = body.substr(pos + strlen("filename=") + 1, pos1 - ( strlen("filename=") + 1) - pos - 1);
+				if (!file[0])
+                {
+                    std::string time_B = creat_file_name();
+                    file = time_B;
+                    std::string dot  = ".";
+                    file = time_B + dot;
+                    file = file + "txt";
+                }
+                if (access(file.c_str(),F_OK ) == 0)
+                {
+                    //in case of duplcate 
+                    end = 1;
+                    crfile = -2;
+                    // std::cout << "WORNG ALLL\n";
+                    // exit(1);
+                    return ;
+                }
+                out.open(file.c_str(), std::ios::out | std::ios::binary);
+				if (out.is_open())
+					std::cout << "FILE opened\n";
+				else
+                {
+                    std::cout << "File Problem\n";
+					exit(4);
+                }
+				
+			}
+			else
+			{
+                std::string file;
+				std::cout << "No File Name\n";
+                std::string time_B = creat_file_name();
+                std::stringstream ss1;
+                ss1 << file_hang;
+                file = time_B + ss1.str();
+                // std::cout << "file is " << time_B << "add to " << ss1.str() <<std::endl;
+                file_hang++;
+                std::string dot  = ".";
+                file = file +  dot;
+                file = file + "txt";
+                ss1.str("");
+                out.open(file.c_str(), std::ios::out | std::ios::binary);
+				if (out.is_open())
+					std::cout << "FILE opened\n" << file<<std::endl;
+				else
+                {
+                    std::cout << "File Problem\n";
+					exit(4);
+                    
+                }
+				//make Error page 
+				// return ;
+			}
+			buff_chunk = "";
+			pos = body.find("\r\n\r\n");
+            int end_sep;
+            if (body.find(sep, pos) != std::string::npos)
+            {
+                pos1 = body.find(sep, pos);
+                end_sep = pos1 - (pos + 4 +2);
+            }
+            else 
+                end_sep = body.size() - (pos + 4 + 2);
+			buff_chunk.append(body, pos + 4, end_sep);
+            out.write(buff_chunk.c_str(), buff_chunk.size() );
+            buff_chunk = "";
+            if (body.find(sep, pos + 1) != std::string::npos)
+            {
+                out.close();
+                pos1 = body.find(sep, pos);
+                buffer = body.substr(pos1, body.size() - pos1);
+                left_over = buffer.size();
+            }
+		}
+		else
+		{
+            if (left_over)
+            {
+                buffer.append(body, 0, body.size());
+                left_over += body.size();   
+            }
+            else
+            {
+                buffer = body;
+                left_over = body.size();
+            }
+		}
+	}
+    else
+    {
+        if (out.is_open())
+        {
+            out.write(body.c_str(), body.size() );
+        }
+    }
+}
+
+int Post::process(std::string body, size_t body_size, int event)
+{
+    std::cout << "IN post \n";
+	std::cout << MethodType << " << is "<<std::endl;
+	std::cout << "Body is \n" <<body<<"."<<std::endl;
+    std::cout  << serv.rootUri<<std::endl;
+    std::cout << serv.UriLocation.upload<<std::endl;
+    std::cout << serv.root[0]<<std::endl;
+    std::cout << "cgi "<<serv.Is_cgi<<std::endl;
+    (void)event;
     if (crfile == -2)
-        return ;
+        return 1;
     if (body_size == 2 && MethodType == 1)
     {
         buff_chunk = body;
         left_over = 2;
-        return ;
+        return 1;
     } 
 	 if (crfile > 0)
     {
-        if (MethodType == 2)
-		    normalFile(body, body_size);
-      else if (MethodType == 1)
-           chunked_file(body, body_size);
-        
+		if (MethodType == 2)
+			normalFile(body, body_size);
+		else if (MethodType == 1)
+			chunked_file(body, body_size);
+		else
+			ft_boundary(body);
     }
 	else if (!crfile)
 		openFile(body, body_size);
+    // std::cout << "Here1\n\n";
+    // if (end && )
+	std::cout << MethodType <<" IN post end \n";
+    return 1;
 }
