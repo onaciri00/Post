@@ -6,7 +6,7 @@
 /*   By: onaciri <onaciri@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/24 10:40:02 by onaciri           #+#    #+#             */
-/*   Updated: 2024/02/04 12:33:07 by onaciri          ###   ########.fr       */
+/*   Updated: 2024/02/05 16:24:22 by onaciri          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -203,7 +203,6 @@ void Post::openFile(std::string body, size_t body_size)
     else if (MethodType != 3)
     {
         std::cout << "No Content Type\n";
-        
 		crfile = -2;
         end = 1;
         return ;
@@ -574,7 +573,6 @@ int Post::process(std::string body, size_t body_size, int event)
     std::cout  << serv.rootUri<<std::endl;
     std::cout << serv.UriLocation.upload<<std::endl;
     std::cout << serv.root[0]<<std::endl;
-    std::cout << "cgi "<<serv.Is_cgi<<std::endl;
     (void)event;
     if (crfile == -2)
         return 1;
